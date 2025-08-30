@@ -6,8 +6,8 @@ package websocket
 
 import (
 	"bufio"
+	http "github.com/bogdanfinn/fhttp"
 	"net"
-	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -370,4 +370,3 @@ func (b *brNetConn) Read(p []byte) (n int, err error) {
 func (b *brNetConn) NetConn() net.Conn {
 	return b.Conn
 }
-

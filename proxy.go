@@ -10,8 +10,8 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	http "github.com/bogdanfinn/fhttp"
 	"net"
-	"net/http"
 	"net/url"
 	"strings"
 

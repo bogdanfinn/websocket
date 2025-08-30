@@ -6,14 +6,14 @@ package main
 
 import (
 	"flag"
+	http "github.com/bogdanfinn/fhttp"
 	"html/template"
 	"log"
-	"net/http"
 	"os"
 	"strconv"
 	"time"
 
-	"github.com/gorilla/websocket"
+	"github.com/bogdanfinn/websocket"
 )
 
 const (

@@ -8,8 +8,8 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/base64"
+	http "github.com/bogdanfinn/fhttp"
 	"io"
-	"net/http"
 	"strings"
 	"unicode/utf8"
 )

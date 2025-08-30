@@ -5,7 +5,7 @@
 package websocket
 
 import (
-	"net/http"
+	http "github.com/bogdanfinn/fhttp"
 	"reflect"
 	"testing"
 )
