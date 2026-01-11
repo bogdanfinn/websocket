@@ -9,14 +9,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	http "github.com/bogdanfinn/fhttp"
-	"github.com/bogdanfinn/fhttp/httptrace"
-	"github.com/bogdanfinn/utls"
 	"io"
 	"net"
 	"net/url"
 	"strings"
 	"time"
+
+	http "github.com/bogdanfinn/fhttp"
+	"github.com/bogdanfinn/fhttp/httptrace"
+	"github.com/bogdanfinn/utls"
 )
 
 // ErrBadHandshake is returned when the server response to opening handshake is
@@ -252,6 +253,12 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 
 	if d.EnableCompression {
 		req.Header["Sec-WebSocket-Extensions"] = []string{"permessage-deflate; server_no_context_takeover; client_no_context_takeover"}
+	}
+
+	// Preserve header order from http.HeaderOrderKey if present (for fingerprinting resistance)
+	// This follows the same pattern as regular HTTP requests in tls-client
+	if headerOrder, ok := requestHeader[http.HeaderOrderKey]; ok && len(headerOrder) > 0 {
+		req.Header[http.HeaderOrderKey] = headerOrder
 	}
 
 	if d.HandshakeTimeout != 0 {
