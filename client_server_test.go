@@ -54,8 +54,13 @@ type cstHandler struct {
 type cstServer struct {
 	URL    string
 	Server *httptest.Server
+	t      *testing.T
 	wg     sync.WaitGroup
 }
+
+// How long (*cstServer).Close waits for the handler functions before it gives
+// up and fails the test rather than blocking forever.
+const cstServerCloseTimeout = 10 * time.Second
 
 const (
 	cstPath       = "/a/b"
@@ -65,12 +70,24 @@ const (
 
 func (s *cstServer) Close() {
 	s.Server.Close()
-	// Wait for handler functions to complete.
-	s.wg.Wait()
+	// Wait for handler functions to complete. A handler blocked on a client
+	// that a failing test never closed must not deadlock the whole package,
+	// so give up after a while and report it instead.
+	done := make(chan struct{})
+	go func() {
+		s.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(cstServerCloseTimeout):
+		s.t.Errorf("timeout waiting for handler functions to complete")
+	}
 }
 
 func newServer(t *testing.T) *cstServer {
 	var s cstServer
+	s.t = t
 	s.Server = httptest.NewServer(cstHandler{T: t, s: &s})
 	s.Server.URL += cstRequestURI
 	s.URL = makeWsProto(s.Server.URL)
@@ -79,6 +96,7 @@ func newServer(t *testing.T) *cstServer {
 
 func newTLSServer(t *testing.T) *cstServer {
 	var s cstServer
+	s.t = t
 	s.Server = httptest.NewTLSServer(cstHandler{T: t, s: &s})
 	s.Server.URL += cstRequestURI
 	s.URL = makeWsProto(s.Server.URL)

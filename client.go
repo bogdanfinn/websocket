@@ -442,6 +442,10 @@ func (d *Dialer) netDialFromURL(u *url.URL) netDialerFunc {
 	default:
 		netDial = (&net.Dialer{}).DialContext
 	}
+	// The fhttp httptrace fork cannot hook into the standard library's
+	// internal nettrace, so net.Dialer never reports the connect events.
+	// Report them here around the raw connect instead.
+	netDial = netDialWithTrace(netDial)
 	// If dialed entity is HTTPS, then either use custom TLS dialing function (if exists)
 	// or wrap the previously computed "netDial" to use TLS config for handshake.
 	if u.Scheme == "https" {
@@ -452,6 +456,22 @@ func (d *Dialer) netDialFromURL(u *url.URL) netDialerFunc {
 		}
 	}
 	return netDial
+}
+
+// Returns wrapped "netDial" function, reporting the ConnectStart and
+// ConnectDone client trace events around the connect.
+func netDialWithTrace(netDial netDialerFunc) netDialerFunc {
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		trace := httptrace.ContextClientTrace(ctx)
+		if trace != nil && trace.ConnectStart != nil {
+			trace.ConnectStart(network, addr)
+		}
+		conn, err := netDial(ctx, network, addr)
+		if trace != nil && trace.ConnectDone != nil {
+			trace.ConnectDone(network, addr, err)
+		}
+		return conn, err
+	}
 }
 
 // Returns wrapped "netDial" function, performing TLS handshake after connecting.
