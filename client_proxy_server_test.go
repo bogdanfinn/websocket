@@ -711,7 +711,7 @@ var proxyHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Reques
 	// Return 200 OK to client.
 	w.WriteHeader(http.StatusOK)
 	// Hijack client connection.
-	client, _, err := w.(http.Hijacker).Hijack()
+	client, clientBuf, err := w.(http.Hijacker).Hijack()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -720,7 +720,9 @@ var proxyHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Reques
 	// Create duplex streaming between client and upstream connections.
 	done := make(chan struct{}, 2)
 	go func() {
-		_, _ = io.Copy(upstream, client)
+		// The server may already have buffered the first bytes the client sent
+		// after the CONNECT response, so read through the hijacked buffer.
+		_, _ = io.Copy(upstream, clientBuf)
 		done <- struct{}{}
 	}()
 	go func() {
